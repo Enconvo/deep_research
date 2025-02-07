@@ -18,6 +18,7 @@
       "description": "Deep Research Agent",
       "icon": "icon.png",
       "mode": "no-view",
+      "commandType": "agent",
       "parameters": {
         "type": "object",
         "properties": {
