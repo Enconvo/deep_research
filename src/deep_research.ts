@@ -1,8 +1,6 @@
-import * as fs from 'fs/promises';
-
 import { deepResearch, writeFinalReport } from './deep-research';
 import { generateFeedback } from './feedback';
-import { Action, BaseChatMessage, ChatMessageContent, LLMProvider, LLMTool, RequestOptions, res, Response, ResponseAction } from '@enconvo/api';
+import { Action, BaseChatMessage, LLMProvider, LLMTool, RequestOptions, Response, ResponseAction } from '@enconvo/api';
 import { systemPrompt } from './prompt';
 import { z } from 'zod';
 import zodToJsonSchema from 'zod-to-json-schema';
@@ -17,6 +15,8 @@ interface DeepResearchOptions extends RequestOptions {
 // run the agent
 export default async function main(req: Request) {
   const options: DeepResearchOptions = await req.json();
+
+  console.log("options", options)
 
   const initialQuery = options.topic || options.input_text;
   if (!initialQuery) {
@@ -119,7 +119,7 @@ export default async function main(req: Request) {
     actions = [
       Action.Paste({ content: researchResult.text() }),
       Action.Copy({ content: researchResult.text() }),
-      Action.SaveFile({
+      Action.SaveAsFile({
         fileName: 'output.md',
         content: researchResult.text()
       })

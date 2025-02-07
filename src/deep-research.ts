@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import { trimPrompt } from './ai/providers';
 import { systemPrompt } from './prompt';
-import { BaseChatMessage, ChatMessageContent, LLMProvider, WebSearchProvider } from '@enconvo/api';
+import { BaseChatMessage, ChatMessageContent, LLMOptions, LLMProvider, WebSearchProvider } from '@enconvo/api';
 import zodToJsonSchema from 'zod-to-json-schema';
 import { toObject } from './utils';
 
@@ -29,7 +29,8 @@ async function generateSerpQueries({
   learnings?: string[];
 }) {
 
-  const llm = await LLMProvider.fromEnv();
+
+  const llm = await LLMProvider.fromEnv("research_llm");
   const schema = z.object({
     queries: z
       .array(
@@ -113,7 +114,7 @@ async function processSerpResult({
   })
   const schemaJson = zodToJsonSchema(schema)
 
-  const llm = await LLMProvider.fromEnv();
+  const llm = await LLMProvider.fromEnv("research_llm");
   const systemMessage = BaseChatMessage.system(systemPrompt());
   const userMessage = BaseChatMessage.user(
     `Given the following contents from a SERP search for the query <query>${query}</query>, generate a list of learnings from the contents. 
@@ -163,7 +164,7 @@ export async function writeFinalReport({
       .join('\n'),
     150_000,
   );
-  const llm = await LLMProvider.fromEnv();
+  const llm = await LLMProvider.fromEnv("research_llm");
   const systemMessage = BaseChatMessage.system(systemPrompt());
   const userMessage = BaseChatMessage.user(
     `Given the following prompt from the user, write a final report on the topic using the learnings from research. Make it as as detailed as possible, aim for 3 or more pages, include ALL the learnings from research:\n\n<prompt>${prompt}</prompt>\n\nHere are all the learnings from previous research:\n\n<learnings>\n${learningsString}\n</learnings>`,
@@ -185,13 +186,14 @@ export async function deepResearch({
   breadth,
   depth,
   learnings = [],
-  visitedUrls = [],
+  visitedUrls = []
 }: {
   query: string;
   breadth: number;
   depth: number;
   learnings?: string[];
   visitedUrls?: string[];
+  researchLLMOptions?: LLMOptions;
 }): Promise<ResearchResult> {
 
   const serpQueries = await generateSerpQueries({
