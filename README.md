@@ -1,6 +1,6 @@
 # Deep Research
 
-
+A powerful AI assistant that analyzes and integrates massive online information to help you complete multi-step research tasks. Now available to all users and compatible with all LLM providers.
 
 ## References
 
