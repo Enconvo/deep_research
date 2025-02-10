@@ -1,7 +1,7 @@
 {
   "$schema": "https://enconvo.com/schemas/extension.json",
   "name": "deep_research",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "description": "Deep Research Agent",
   "title": "Deep Research",
   "icon": "icon.png",
@@ -84,7 +84,7 @@
     "tsup": "^8.3.5"
   },
   "dependencies": {
-    "@enconvo/api": "^0.1.166",
+    "@enconvo/api": "link:/Users/ysnows/Documents/Project/enconvo.nodejs/enconvo_api",
     "js-tiktoken": "^1.0.17",
     "lodash-es": "^4.17.21",
     "p-limit": "^6.2.0",

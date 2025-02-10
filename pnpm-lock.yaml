@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@enconvo/api':
-        specifier: ^0.1.166
-        version: 0.1.166
+        specifier: link:/Users/ysnows/Documents/Project/enconvo.nodejs/enconvo_api
+        version: link:../../enconvo.nodejs/enconvo_api
       js-tiktoken:
         specifier: ^1.0.17
         version: 1.0.18
@@ -83,10 +83,6 @@ packages:
   '@babel/types@7.26.7':
     resolution: {integrity: sha512-t8kDRGrKXyp6+tjUh7hw2RLyclsW4TRoRvRHtSyAX9Bb5ldlFh+90YAYY6awRXrlB4G5G2izNeGySpATlFzmOg==}
     engines: {node: '>=6.9.0'}
-
-  '@enconvo/api@0.1.166':
-    resolution: {integrity: sha512-8slaLhZe/CjuMnu57gIcDaNJ8Pre4aUH28EplgX8+CaFO+F2pFAGDnX/D4eruCs2Ju5T18WGCbp9u/MGse/6Xg==}
-    hasBin: true
 
   '@esbuild/aix-ppc64@0.23.1':
     resolution: {integrity: sha512-6VhYk1diRqrhBAqpJEdjASR/+WVRtfjpqKuNw11cLiaWpAT/Uu+nokB+UJnevzy/P9C/ty6AOe0dwueMrGh/iQ==}
@@ -948,8 +944,6 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.25.9
       '@babel/helper-validator-identifier': 7.25.9
-
-  '@enconvo/api@0.1.166': {}
 
   '@esbuild/aix-ppc64@0.23.1':
     optional: true

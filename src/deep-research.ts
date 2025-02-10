@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import { trimPrompt } from './ai/providers';
 import { systemPrompt } from './prompt';
-import { BaseChatMessage, ChatMessageContent, LLMOptions, LLMProvider, WebSearchProvider } from '@enconvo/api';
+import { BaseChatMessage, ChatMessageContent, LLMOptions, LLMProvider, res, WebSearchProvider } from '@enconvo/api';
 import zodToJsonSchema from 'zod-to-json-schema';
 import { toObject } from './utils';
 
@@ -167,7 +167,7 @@ export async function writeFinalReport({
   const llm = await LLMProvider.fromEnv("research_llm");
   const systemMessage = BaseChatMessage.system(systemPrompt());
   const userMessage = BaseChatMessage.user(
-    `Given the following prompt from the user, write a final report on the topic using the learnings from research. Make it as as detailed as possible, aim for 3 or more pages, include ALL the learnings from research:\n\n<prompt>${prompt}</prompt>\n\nHere are all the learnings from previous research:\n\n<learnings>\n${learningsString}\n</learnings>`,
+    `Given the following prompt from the user, write a final report on the topic using the learnings from research. Make it as as detailed as possible, aim for 3 or more pages, include ALL the learnings from research:\n\n<prompt>${prompt}</prompt>\n\nHere are all the learnings from previous research:\n\n<learnings>\n${learningsString}\n</learnings>, use the same language as the user's original query.`,
   );
   const stream = await llm.stream({
     messages: [systemMessage, userMessage]
@@ -186,7 +186,9 @@ export async function deepResearch({
   breadth,
   depth,
   learnings = [],
-  visitedUrls = []
+  visitedUrls = [],
+  flowId,
+  messageContentArray,
 }: {
   query: string;
   breadth: number;
@@ -194,7 +196,16 @@ export async function deepResearch({
   learnings?: string[];
   visitedUrls?: string[];
   researchLLMOptions?: LLMOptions;
+  flowId: string;
+  messageContentArray: ChatMessageContent[];
 }): Promise<ResearchResult> {
+
+  res.write({
+    content: `🤔 Analyzing query`,
+    action: res.WriteAction.FlowAppendToLastMessageContent,
+    flowId,
+  })
+  messageContentArray.push(ChatMessageContent.text(`🤔 Analyzing query`))
 
   const serpQueries = await generateSerpQueries({
     query,
@@ -210,13 +221,31 @@ export async function deepResearch({
         try {
           console.log(`Searching for ${serpQuery.query}`)
 
-
+          res.write({
+            content: `🔍Searching for ${serpQuery.query}`,
+            action: res.WriteAction.FlowAppendToLastMessageContent,
+            flowId,
+          })
+          messageContentArray.push(ChatMessageContent.text(`🔍Searching for ${serpQuery.query}`))
           const webSearchProvider = await WebSearchProvider.fromEnv();
 
           const result = await webSearchProvider.call({
             query: serpQuery.query
           });
+
           console.log(`Found ${result?.items.length} results`)
+
+          // Write results count and display URLs in markdown table format
+          const urlTable = result?.items.map((item, i) =>
+            `| ${i + 1} | [${item.title || 'Link'}](${item.url}) |`
+          ).join('\n');
+
+          res.write({
+            content: `📊Found ${result?.items.length} results\n\n| # | URL |\n|---|---|\n${urlTable}`,
+            action: res.WriteAction.FlowAppendToLastMessageContent,
+            flowId,
+          })
+          messageContentArray.push(ChatMessageContent.text(`📊Found ${result?.items.length} results\n\n| # | URL |\n|---|---|\n${urlTable}`))
 
           // Collect URLs from this search
           const newUrls = compact(result?.items.map(item => item.url) ?? []);
@@ -228,6 +257,7 @@ export async function deepResearch({
             result: result ?? undefined,
             numFollowUpQuestions: newBreadth,
           });
+
           const allLearnings = [...learnings, ...newLearnings.learnings];
           const allUrls = [...visitedUrls, ...newUrls];
 
@@ -235,7 +265,12 @@ export async function deepResearch({
             console.log(
               `Researching deeper, breadth: ${newBreadth}, depth: ${newDepth}`,
             );
-
+            res.write({
+              content: `🔍Researching deeper`,
+              action: res.WriteAction.FlowAppendToLastMessageContent,
+              flowId,
+            })
+            messageContentArray.push(ChatMessageContent.text(`🔍Researching deeper`))
             const nextQuery = `
             Previous research goal: ${serpQuery.researchGoal}
             Follow-up research directions: ${newLearnings.followUpQuestions.map((q: string) => `\n${q}`).join('')}
@@ -247,6 +282,8 @@ export async function deepResearch({
               depth: newDepth,
               learnings: allLearnings,
               visitedUrls: allUrls,
+              flowId,
+              messageContentArray,
             });
           } else {
             return {

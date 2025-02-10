@@ -20,7 +20,7 @@ Follow these instructions when responding:
   - Value good arguments over authorities, the source is irrelevant.
   - Consider new technologies and contrarian ideas, not just the conventional wisdom.
   - You may use high levels of speculation or prediction, just flag it for me.
-  - use the same language as the user's query.
+  - use the same language as the user's original query.
   `;
   
 };

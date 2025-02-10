@@ -1,6 +1,6 @@
 import { deepResearch, writeFinalReport } from './deep-research';
 import { generateFeedback } from './feedback';
-import { Action, BaseChatMessage, LLMProvider, LLMTool, RequestOptions, Response, ResponseAction } from '@enconvo/api';
+import { Action, BaseChatMessage, ChatMessageContent, LLMProvider, LLMTool, RequestOptions, res, Response, ResponseAction } from '@enconvo/api';
 import { systemPrompt } from './prompt';
 import { z } from 'zod';
 import zodToJsonSchema from 'zod-to-json-schema';
@@ -16,29 +16,24 @@ interface DeepResearchOptions extends RequestOptions {
 export default async function main(req: Request) {
   const options: DeepResearchOptions = await req.json();
 
-  console.log("options", options)
-
   const initialQuery = options.topic || options.input_text;
   if (!initialQuery) {
     throw new Error('Please provide a topic for me to research');
   }
 
-  // Get breath and depth parameters
-  const breadth = options.breadth || 4;
-  const depth = options.depth || 2;
 
-  console.log(`Creating research plan...`);
+  // Get breath and depth parameters
+  const breadth = options.breadth || 1;
+  const depth = options.depth || 1;
 
   const systemMessage = BaseChatMessage.system(systemPrompt());
   const userMessage = BaseChatMessage.user(initialQuery);
-
 
 
   const clarifyWithTextToolSchema = z.object({
     query: z.string().describe('The query to clarify'),
   })
   const clarifyWithTextToolSchemaJson = zodToJsonSchema(clarifyWithTextToolSchema)
-  console.log(clarifyWithTextToolSchemaJson)
 
   let clarifyMessage: BaseChatMessage | undefined;
 
@@ -49,8 +44,7 @@ export default async function main(req: Request) {
     end: true,
     parameters: clarifyWithTextToolSchemaJson,
     toolType: 'method',
-    run: async ({ query }: { query: string }) => {
-      console.log(`Clarifying research for ${query}`);
+    run: async ({ query, flowId }: { query: string, flowId: string }) => {
       const followUpQuestions = await generateFeedback({
         query: query,
       });
@@ -65,30 +59,31 @@ export default async function main(req: Request) {
     query: z.string().describe('The topic with additional details to research'),
   })
   const startResearchToolSchemaJson = zodToJsonSchema(startResearchToolSchema)
-  console.log(startResearchToolSchemaJson)
 
   let researchResult: BaseChatMessage | undefined;
   const startResearchTool: LLMTool = {
     name: 'start_research',
     title: 'Deep Research',
     description: 'Start a research task',
+    notUseToolContent: true,
     parameters: startResearchToolSchemaJson,
     toolType: 'method',
     end: true,
-    run: async ({ query }: { query: string }) => {
-      console.log(`Starting research for ${query}`);
+    run: async ({ query, flowId }: { query: string, flowId: string }) => {
+      console.log(`\n\nStarting research for ${query} with flowId ${flowId}`);
 
-      console.log('\nResearching your topic...');
-
+      let messageContentArray: ChatMessageContent[] = [];
       const { learnings, visitedUrls } = await deepResearch({
         query: query,
         breadth,
         depth,
+        flowId,
+        messageContentArray,
       });
 
-      console.log(`\n\nLearnings:\n\n${learnings.join('\n')}`);
       console.log(`\n\nVisited URLs (${visitedUrls.length}):\n\n${visitedUrls.join('\n')}`);
       console.log('Writing final report...');
+      res.writeLoading("🔍 Writing final report", flowId);
 
       const report = await writeFinalReport({
         prompt: query,
@@ -96,12 +91,16 @@ export default async function main(req: Request) {
         visitedUrls,
       });
 
+      res.write({
+        content: `✅ Final report has been generated`,
+        action: res.WriteAction.FlowAppendToLastMessageContent,
+        flowId,
+      })
+
       // Save report to file
 
-      console.log(`\n\nFinal Report:\n\n${report.text()}`);
-      console.log('\nReport has been saved to output.md');
       researchResult = report;
-      return report;
+      return BaseChatMessage.assistant(messageContentArray)
     }
   };
 
@@ -111,7 +110,7 @@ export default async function main(req: Request) {
     tools: [clarifyWithTextTool, startResearchTool]
   })
 
-  console.log("researchResult", researchResult)
+  console.log("researchResult", stream)
 
   let actions: ResponseAction[] = []
 
@@ -124,7 +123,19 @@ export default async function main(req: Request) {
         content: researchResult.text()
       })
     ]
+
+    // @ts-ignore
+    researchResult?.content?.unshift(...stream.content)
+
+    return Response.messages([researchResult!], actions)
   }
+
+
+  actions = [
+    Action.Paste({ content: stream.text() }),
+    Action.Copy({ content: stream.text() }),
+  ]
+
 
   return Response.messages([stream], actions)
 
