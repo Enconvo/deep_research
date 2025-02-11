@@ -23,8 +23,8 @@ export default async function main(req: Request) {
 
 
   // Get breath and depth parameters
-  const breadth = options.breadth || 1;
-  const depth = options.depth || 1;
+  const breadth = options.breadth || 4;
+  const depth = options.depth || 2;
 
   const systemMessage = BaseChatMessage.system(systemPrompt());
   const userMessage = BaseChatMessage.user(initialQuery);
