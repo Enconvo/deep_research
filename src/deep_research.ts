@@ -29,7 +29,6 @@ export default async function main(req: Request) {
   const systemMessage = BaseChatMessage.system(systemPrompt());
   const userMessage = BaseChatMessage.user(initialQuery);
 
-
   const clarifyWithTextToolSchema = z.object({
     query: z.string().describe('The query to clarify'),
   })
